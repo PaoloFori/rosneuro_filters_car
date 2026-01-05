@@ -15,7 +15,14 @@ namespace rosneuro {
             ~Car(void) {};
 
             bool configure(void);
-            bool configure(std::vector<int> channels_exclude); 
+            bool configure(const std::string& param_name) {
+                return Filter<T>::configure(param_name);
+            }
+
+            bool configure(const std::vector<int>& eog_ch) {
+                this->eog_ch_excl_ = eog_ch;
+                return true;
+            }
             
             DynamicMatrix<T> apply(const DynamicMatrix<T>& in);
             FRIEND_TEST(CarTestSuite, TestCarName);
@@ -32,15 +39,17 @@ namespace rosneuro {
 
     template<typename T>
     bool Car<T>::configure(void) {
-        this->eog_ch_excl_.clear();
         this->mask_excl_.clear();
-        return true;
-    }
+        std::vector<double> eog_ch;
 
-    template<typename T>
-    bool Car<T>::configure(std::vector<int> channels_exclude) {
-        this->eog_ch_excl_ = channels_exclude;
-        this->mask_excl_.clear();
+        if (!Filter<T>::getParam(std::string("EOG_ch"), eog_ch)) { // zero based indexing
+            ROS_ERROR("[%s] Cannot find param EOG_ch", this->name().c_str());
+            return false;
+        }
+        this->eog_ch_excl_ = std::vector<int>(eog_ch.size(), 0);
+        for(auto i=0; i<eog_ch.size(); i++) {
+            this->eog_ch_excl_[i] = static_cast<int>(eog_ch[i] - 1); // to bring it in 0 based
+        }
 
         return true;
     }
