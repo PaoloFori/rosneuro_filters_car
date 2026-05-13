@@ -1,0 +1,28 @@
+<launch>
+
+    <arg name="gdf_file"   default="/home/paolo/prova32ch.gdf"/>
+    <arg name="samplerate" default="512"/>
+    <arg name="framerate"  default="16"/>
+
+    <!-- rosneuro_acquisition replaying a GDF file via eegdev datafile plugin -->
+    <node name="acquisition" pkg="rosneuro_acquisition" type="acquisition" output="screen">
+        <param name="~plugin"     value="rosneuro::EGDDevice"/>
+        <param name="~devarg"     value="$(arg gdf_file)"/>
+        <param name="~samplerate" value="$(arg samplerate)"/>
+        <param name="~framerate"  value="$(arg framerate)"/>
+    </node>
+
+    <!-- CAR node -->
+    <node name="car_node" pkg="rosneuro_filters_car" type="test_car_node_rosneuro_filters_car" output="screen">
+        <rosparam param="EOG_ch_names">['Fp1', 'Fp2']</rosparam>
+        <param name="topic_out" value="/car_output"/>
+    </node>
+
+    <!-- Logger -->
+    <node pkg="rosneuro_filters_car" type="test_logger_car_rosneuro_filters_car"
+          name="car_logger" output="screen">
+        <param name="output_filename" value="$(find rosneuro_filters_car)/test/car_gdf_output.csv"/>
+        <param name="topic"           value="/car_output"/>
+    </node>
+
+</launch>

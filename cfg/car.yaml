@@ -2,4 +2,4 @@ CarCfg:
   name: car
   type: CarFilterDouble
   params:
-    EOG_ch: [1, 2, 19]  # FP1, FP2, EOG
+    EOG_ch_names: ['Fp1', 'Fp2']

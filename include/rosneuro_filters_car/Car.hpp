@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include <gtest/gtest_prod.h>
 #include <vector>
+#include <string>
 #include <algorithm>
 #include <rosneuro_filters/Filter.hpp>
 
@@ -21,15 +22,34 @@ namespace rosneuro {
 
             bool configure(const std::vector<int>& eog_ch) {
                 this->eog_ch_excl_ = eog_ch;
+                this->mask_excl_.clear();
                 return true;
             }
-            
+
+            // Resolve EOG channel names to indices using the provided label list
+            bool configure(const std::vector<std::string>& ch_labels,
+                           const std::vector<std::string>& eog_names) {
+                this->eog_ch_names_ = eog_names;
+                this->eog_ch_excl_.clear();
+                this->mask_excl_.clear();
+                for (const auto& name : eog_names) {
+                    for (int i = 0; i < (int)ch_labels.size(); i++) {
+                        std::string a = name, b = ch_labels[i];
+                        std::transform(a.begin(), a.end(), a.begin(), ::tolower);
+                        std::transform(b.begin(), b.end(), b.begin(), ::tolower);
+                        if (a == b) { this->eog_ch_excl_.push_back(i); break; }
+                    }
+                }
+                return true;
+            }
+
             DynamicMatrix<T> apply(const DynamicMatrix<T>& in);
             FRIEND_TEST(CarTestSuite, TestCarName);
 
         private:
-            std::vector<int> eog_ch_excl_;
-            std::vector<bool> mask_excl_; 
+            std::vector<int>         eog_ch_excl_;
+            std::vector<bool>        mask_excl_;
+            std::vector<std::string> eog_ch_names_;
     };
 
     template<typename T>
@@ -40,17 +60,27 @@ namespace rosneuro {
     template<typename T>
     bool Car<T>::configure(void) {
         this->mask_excl_.clear();
+        this->eog_ch_excl_.clear();
+
+        std::vector<std::string> eog_ch_names;
+        if (Filter<T>::getParam(std::string("EOG_ch_names"), eog_ch_names)) {
+            this->eog_ch_names_ = eog_ch_names;
+            ROS_INFO("[%s] EOG_ch_names loaded (%zu channels, name-based – call configure(labels,names) to resolve)",
+                     this->name().c_str(), eog_ch_names.size());
+            return true;
+        }
+
         std::vector<double> eog_ch;
-
-        if (!Filter<T>::getParam(std::string("EOG_ch"), eog_ch)) { // zero based indexing
-            ROS_ERROR("[%s] Cannot find param EOG_ch", this->name().c_str());
-            return false;
-        }
-        this->eog_ch_excl_ = std::vector<int>(eog_ch.size(), 0);
-        for(auto i=0; i<eog_ch.size(); i++) {
-            this->eog_ch_excl_[i] = static_cast<int>(eog_ch[i] - 1); // to bring it in 0 based
+        if (Filter<T>::getParam(std::string("EOG_ch"), eog_ch)) {
+            this->eog_ch_excl_.resize(eog_ch.size());
+            for (size_t i = 0; i < eog_ch.size(); i++)
+                this->eog_ch_excl_[i] = static_cast<int>(eog_ch[i] - 1);
+            ROS_INFO("[%s] EOG_ch loaded (%zu channels, index-based)", this->name().c_str(), eog_ch.size());
+            return true;
         }
 
+        ROS_WARN("[%s] Neither EOG_ch_names nor EOG_ch found – CAR applied to all channels",
+                 this->name().c_str());
         return true;
     }
 
