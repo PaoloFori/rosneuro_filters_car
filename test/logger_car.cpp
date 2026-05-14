@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <vector>
 #include <string>
+#include <cstdlib>
 
 static bool g_shutdown = false;
 static void sigint_handler(int) { g_shutdown = true; ros::shutdown(); }
@@ -13,6 +14,14 @@ class CarLogger {
 public:
     CarLogger(ros::NodeHandle& nh, ros::NodeHandle& pnh) {
         pnh.param<std::string>("output_filename", output_filename_, "/tmp/car_output.csv");
+
+        // Create output directory if it doesn't exist
+        auto slash = output_filename_.rfind('/');
+        if (slash != std::string::npos) {
+            std::string dir = output_filename_.substr(0, slash);
+            std::system(("mkdir -p " + dir).c_str());
+        }
+
         std::string topic;
         pnh.param<std::string>("topic", topic, "/car_output");
         sub_ = nh.subscribe(topic, 200, &CarLogger::callback, this);

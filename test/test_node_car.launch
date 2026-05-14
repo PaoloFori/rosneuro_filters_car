@@ -1,8 +1,10 @@
 <launch>
 
-    <arg name="samplerate"  default="500"/>
-    <arg name="chunkSize"   default="25"/>
-    <arg name="framerate"   default="20"/>
+    <arg name="data_dir"   default="/home/paolo/bci_vr_ws/test_node_data"/>
+    <arg name="out_dir"    default="$(arg data_dir)/rosneuro_filters_car"/>
+    <arg name="samplerate" default="500"/>
+    <arg name="chunkSize"  default="25"/>
+    <arg name="framerate"  default="20"/>
 
     <!-- CAR node – reads EOG_ch_names from its private namespace -->
     <node name="car_node" pkg="rosneuro_filters_car" type="test_car_node_rosneuro_filters_car" output="screen">
@@ -13,14 +15,14 @@
     <!-- Logger -->
     <node pkg="rosneuro_filters_car" type="test_logger_car_rosneuro_filters_car"
           name="car_logger" output="screen">
-        <param name="output_filename" value="$(find rosneuro_filters_car)/test/car_processing.csv"/>
+        <param name="output_filename" value="$(arg out_dir)/car_processing.csv"/>
         <param name="topic"           value="/car_output"/>
     </node>
 
     <!-- CSV publisher -->
     <node pkg="rosneuro_filters_car" type="test_publisher_rosneuro_filters_car"
           name="car_publisher" output="screen">
-        <param name="csv_file"    value="$(find rosneuro_filters_car)/test/rawdata.csv"/>
+        <param name="csv_file"    value="$(arg data_dir)/raw_eeg_32ch.csv"/>
         <param name="chunk_size"  value="$(arg chunkSize)"/>
         <param name="sample_rate" value="$(arg samplerate)"/>
     </node>

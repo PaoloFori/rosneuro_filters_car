@@ -79,16 +79,27 @@ DynamicMatrix<double> out = car.apply(in);
 
 ## 4. Testing
 
-### 4a. CSV-based test (quick sanity check)
+Test data and output files are all stored under `test_node_data/` in the workspace root. The logger creates `test_node_data/rosneuro_filters_car/` automatically on first run.
 
-Replays `test/rawdata.csv` through the full ROS pipeline.
+```
+test_node_data/
+├── raw_eeg_32ch.csv                    ← CSV test input
+├── prova32ch.gdf                       ← GDF test input
+└── rosneuro_filters_car/               ← created automatically by the logger
+    ├── car_processing.csv
+    ├── car_processing_first_seq.txt
+    ├── car_gdf_output.csv
+    └── car_gdf_output_first_seq.txt
+```
+
+### 4a. CSV-based test (quick sanity check)
 
 ```bash
 roslaunch rosneuro_filters_car test_node_car.launch
-# Wait until publisher finishes, then Ctrl+C.
+# Ctrl+C when done
 ```
 
-Produces `test/car_processing.csv` and `test/car_processing_first_seq.txt`.
+Produces `test_node_data/rosneuro_filters_car/car_processing.csv` and `…_first_seq.txt`.
 
 Compare with MATLAB:
 
@@ -99,17 +110,20 @@ test_car   % from workspace root
 
 ### 4b. GDF-based test (end-to-end with real acquisition)
 
-Replays `test/prova32ch.gdf` (512 Hz, 32 channels) through `rosneuro_acquisition` with the eegdev `datafile` plugin.
-
 ```bash
-roslaunch rosneuro_filters_car test_node_car_gdf.launch \
-    gdf_file:=$(rospack find rosneuro_filters_car)/test/prova32ch.gdf \
-    samplerate:=512 \
-    framerate:=16
+roslaunch rosneuro_filters_car test_node_car_gdf.launch
 # Wait for the file to finish, then Ctrl+C.
 ```
 
-Produces in `test/`:
+Override defaults only if needed:
+
+```bash
+roslaunch rosneuro_filters_car test_node_car_gdf.launch \
+    gdf_file:=/path/to/other.gdf \
+    out_dir:=/path/to/output/
+```
+
+Produces in `test_node_data/rosneuro_filters_car/`:
 - `car_gdf_output.csv` — CAR-filtered EEG indexed by arrival order
 - `car_gdf_output_first_seq.txt` — first seq received (startup frame loss)
 
@@ -124,18 +138,18 @@ test_car   % from workspace root
 
 **`first_seq` — startup frame loss**: `rosneuro_acquisition` may miss the first 1–2 frames. The logger records the first seq received. MATLAB starts its loop at `seq = first_seq` so both pipelines start from the same sample.
 
-**Acquisition pipeline delay (GDF only)**: the eegdev `datafile` plugin buffers one frame internally before publishing. The MATLAB script detects this with `xcorr` on one channel and corrects automatically. Two figures are produced:
+**Acquisition pipeline delay**: the eegdev `datafile` plugin buffers one frame internally (GDF only). The MATLAB script runs `xcorr` on one channel to detect and correct any lag. In CSV mode the search window is limited to ±1 frame (`chunkSize` samples) to avoid spurious xcorr peaks at alpha/beta harmonic lags; in GDF mode the window is ±5 frames. Two figures are produced:
 - **RAW** — unaligned comparison (shows the lag)
 - **ALIGNED** — lag-corrected comparison (traces should overlap)
 
 ### ROS pipeline
 
 ```
-test/rawdata.csv (CSV) or test/prova32ch.gdf (GDF)
+test_node_data/raw_eeg_32ch.csv (CSV) or test_node_data/prova32ch.gdf (GDF)
   → /neurodata  (rosneuro_msgs/NeuroFrame)
       → car_node  (resolves EOG_ch_names on first frame, applies CAR)
           → /car_output  (rosneuro_msgs/NeuroFrame, filtered)
-              → car_logger  → test/car_*.csv + test/car_*_first_seq.txt
+              → car_logger → test_node_data/rosneuro_filters_car/car_*.csv
 ```
 
 ---

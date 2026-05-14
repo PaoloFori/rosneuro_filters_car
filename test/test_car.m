@@ -21,20 +21,21 @@
 clear all; clc; close all;
 
 %% --- input mode ---
-input_mode = 'gdf';   % 'gdf' | 'csv'
+input_mode = 'csv';   % 'gdf' | 'csv'
 
 %% --- paths ---
-pkgpath  = './src/rosneuro_filters_car/';
-car_yaml = [pkgpath 'cfg/car.yaml'];
+data_dir = './test_node_data/';
+out_dir  = './test_node_data/rosneuro_filters_car/';
+car_yaml = './src/rosneuro_filters_car/cfg/car.yaml';
 
 if strcmp(input_mode, 'gdf')
-    input_file   = [pkgpath 'test/prova32ch.gdf'];
-    ros_file     = [pkgpath 'test/car_gdf_output.csv'];
+    input_file   = [data_dir 'prova32ch.gdf'];
+    ros_file     = [out_dir  'car_gdf_output.csv'];
     framerate    = 16;
     plot_start_s = 2;    % skip first N seconds in plots ([] = show all)
 else
-    input_file   = [pkgpath 'test/rawdata.csv'];
-    ros_file     = [pkgpath 'test/car_processing.csv'];
+    input_file   = [data_dir 'raw_eeg_32ch.csv'];
+    ros_file     = [out_dir  'car_processing.csv'];
     framerate    = 20;
     plot_start_s = [];
 end
@@ -127,20 +128,23 @@ ros_out   = ros_data(1:n_compare, :);
 mat_out   = matlab_output(1:n_compare, :);
 
 %% --- cross-correlation on one channel to measure lag ---
-% Applied in both modes: for GDF the expected lag is 1 frame (eegdev pipeline
-% delay); for CSV a small lag (0–1 frame) can occur due to ROS subscriber
-% startup timing.
+% GDF mode: eegdev buffers one frame internally → expected lag is 1 frame.
+% CSV mode: publisher waits for subscriber, so lag is 0 or 1 frame at most.
+%   Search window is kept to ±1 frame to avoid spurious xcorr peaks at
+%   alpha/beta harmonic lags (e.g. 10 Hz × 50ms/frame = 2 frames apart).
 ch_xcorr = 3;
-MAX_LAG_SEARCH = 5 * chunkSize;
+MAX_LAG_SEARCH = chunkSize;   % ±1 frame for both modes; enough for CSV
+if strcmp(input_mode, 'gdf')
+    MAX_LAG_SEARCH = 5 * chunkSize;
+end
 
 [xcf, lags] = xcorr(ros_out(:,ch_xcorr) - mean(ros_out(:,ch_xcorr)), ...
                     mat_out(:,ch_xcorr) - mean(mat_out(:,ch_xcorr)), ...
                     MAX_LAG_SEARCH, 'normalized');
-[~, peak_idx]       = max(xcf);
-measured_lag_samp   = lags(peak_idx);
+[~, peak_idx]     = max(xcf);
+measured_lag_samp = lags(peak_idx);
 measured_lag_frames = round(measured_lag_samp / chunkSize);
-fprintf('Cross-correlation peak lag: %+d samples (%+d frame(s))  ', ...
-        measured_lag_samp, measured_lag_frames);
+fprintf('Lag: %+d samples (%+d frame(s))  ', measured_lag_samp, measured_lag_frames);
 if measured_lag_samp == 0
     fprintf('[no residual lag]\n');
 elseif measured_lag_samp > 0
