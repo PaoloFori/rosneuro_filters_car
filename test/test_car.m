@@ -21,7 +21,8 @@
 clear all; clc; close all;
 
 %% --- input mode ---
-input_mode = 'csv';   % 'gdf' | 'csv'
+input_mode = 'gdf';   % 'gdf' | 'csv'
+ch_plot = 5;
 
 %% --- paths ---
 data_dir = './test_node_data/';
@@ -53,6 +54,12 @@ end
 %% --- load CAR config ---
 car_cfg      = yaml.ReadYaml(car_yaml);
 eog_ch_names = car_cfg.CarCfg.params.EOG_ch_names;
+default_eog_ch_names = [{'Fp1'}, {'Fp2'}];
+if ~iscell(eog_ch_names)
+    warning('EOG_ch_names worng. Defaul values are used: ');
+    disp(default_eog_ch_names)
+    eog_ch_names = default_eog_ch_names;
+end
 
 %% --- load data ---
 [~, ~, ext] = fileparts(input_file);
@@ -114,7 +121,6 @@ end
 %% --- compare with ROS output ---
 if ~isfile(ros_file)
     warning('ROS output not found: %s', ros_file);
-    ch_plot = 3;
     t = (0 : size(matlab_output,1)-1) / sampleRate;
     figure; plot(t, matlab_output(:, ch_plot)); xlabel('time [s]');
     ylabel('amplitude'); title('MATLAB only (no ROS ref)'); grid on;
@@ -188,7 +194,6 @@ m_al_plot  = m_aligned(aligned_skip+1 : end, :);
 t_al_plot  = t_aligned(aligned_skip+1 : end);
 
 %% --- metrics ---
-ch_plot = 3;
 mae_raw     = mean(abs(r_raw_plot(:, ch_plot) - m_raw_plot(:, ch_plot)));
 mae_aligned = mean(abs(r_al_plot(:, ch_plot)  - m_al_plot(:, ch_plot)));
 

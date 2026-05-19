@@ -6,7 +6,7 @@
     <arg name="chunkSize"  default="25"/>
     <arg name="framerate"  default="20"/>
 
-    <!-- CAR node – reads EOG_ch_names from its private namespace -->
+    <!-- CAR node -->
     <node name="car_node" pkg="rosneuro_filters_car" type="test_car_node_rosneuro_filters_car" output="screen">
         <rosparam param="EOG_ch_names">['Fp1', 'Fp2']</rosparam>
         <param name="topic_out" value="/car_output"/>

@@ -2,4 +2,4 @@ CarCfg:
   name: car
   type: CarFilterDouble
   params:
-    EOG_ch_names: ['Fp1', 'Fp2']
+    EOG_ch_names: $(arg EOG_ch_names) #['Fp1', 'Fp2']

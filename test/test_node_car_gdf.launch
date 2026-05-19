@@ -6,7 +6,7 @@
     <arg name="samplerate" default="512"/>
     <arg name="framerate"  default="16"/>
 
-    <!-- rosneuro_acquisition replaying a GDF file via eegdev datafile plugin -->
+    <!-- rosneuro_acquisition -->
     <node name="acquisition" pkg="rosneuro_acquisition" type="acquisition" output="screen">
         <param name="~plugin"     value="rosneuro::EGDDevice"/>
         <param name="~devarg"     value="$(arg gdf_file)"/>
