@@ -21,7 +21,7 @@
 clear all; clc; close all;
 
 %% --- input mode ---
-input_mode = 'gdf';   % 'gdf' | 'csv'
+input_mode = 'csv';   % 'gdf' | 'csv'
 ch_plot = 5;
 
 %% --- paths ---
